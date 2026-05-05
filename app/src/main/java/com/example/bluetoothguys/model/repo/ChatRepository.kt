@@ -7,16 +7,33 @@ import com.example.bluetoothguys.model.db.entities.MessageDirection
 import com.example.bluetoothguys.model.db.entities.MessageEntity
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * Репозиторий чата — единая точка доступа к данным.
+ *
+ * Зачем нужен репозиторий:
+ * - UI/ViewModel не знает про SQL-запросы и Room-аннотации
+ * - можно централизованно менять правила (валидация, маппинг моделей, кеширование)
+ * - проще тестировать (в будущем можно подменить DAO/источник данных)
+ */
 class ChatRepository(
     private val contactDao: ContactDao,
     private val messageDao: MessageDao,
 ) {
+    /** Наблюдать список контактов (будет обновляться при изменениях в БД). */
     fun observeContacts(): Flow<List<ContactEntity>> = contactDao.observeAll()
 
+    /** Получить контакт по id (одноразовый запрос). */
     suspend fun getContactById(id: Long): ContactEntity? = contactDao.getById(id)
 
+    /** Получить контакт по MAC-адресу (одноразовый запрос). */
     suspend fun getContactByMac(macAddress: String): ContactEntity? = contactDao.getByMac(macAddress)
 
+    /**
+     * Создать контакт.
+     *
+     * Возвращает `id` созданной записи.
+     * `macAddress` в таблице уникальный (Room выбросит ошибку при дубликате).
+     */
     suspend fun createContact(
         name: String,
         macAddress: String,
@@ -41,10 +58,18 @@ class ChatRepository(
         contactDao.deleteById(id)
     }
 
+    /** Наблюдать историю сообщений конкретного контакта. */
     fun observeMessages(contactId: Long): Flow<List<MessageEntity>> = messageDao.observeForContact(contactId)
 
+    /** Получить последнее сообщение по контакту (например, для списка чатов). */
     suspend fun getLatestMessage(contactId: Long): MessageEntity? = messageDao.getLatestForContact(contactId)
 
+    /**
+     * Добавить сообщение в историю.
+     *
+     * - `direction = OUT` если отправили мы
+     * - `direction = IN` если получили от устройства
+     */
     suspend fun addMessage(
         contactId: Long,
         direction: MessageDirection,
