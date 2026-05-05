@@ -1,4 +1,4 @@
-package com.example.bluetoothguys.ui.theme
+package com.example.bluetoothguys.view.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
