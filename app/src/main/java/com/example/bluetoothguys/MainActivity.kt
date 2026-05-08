@@ -5,71 +5,69 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.bluetoothguys.view.ui.screens.chat.ChatScreen
 import com.example.bluetoothguys.view.ui.screens.chat_list.ChatListScreen
 import com.example.bluetoothguys.view.ui.theme.BluetoothGuysTheme
-import com.example.bluetoothguys.model.Chat
-import com.example.bluetoothguys.view_model.BluetoothMessengerUiState
-import com.example.bluetoothguys.view_model.BluetoothMessengerViewModel
+import com.example.bluetoothguys.view_model.ChatViewModel
 
 class MainActivity : ComponentActivity() {
-    private val viewModel: BluetoothMessengerViewModel by viewModels()
+    private val vm: ChatViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             BluetoothGuysTheme {
-                val uiState by viewModel.uiState.collectAsState()
-
-                BluetoothMessengerApp(
-                    uiState = uiState,
-                    onChatClick = viewModel::selectChat,
-                    onBackClick = viewModel::closeChat,
-                    onTextChange = viewModel::updateInput,
-                    onSendClick = viewModel::sendMessage
-                )
+                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    HomeScreen(
+                        vm = vm,
+                        modifier = Modifier.padding(innerPadding),
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun BluetoothMessengerApp(
-    uiState: BluetoothMessengerUiState,
-    onChatClick: (Chat) -> Unit,
-    onBackClick: () -> Unit,
-    onTextChange: (String) -> Unit,
-    onSendClick: () -> Unit
-) {
-    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
-            val selectedChat = uiState.selectedChat
+fun HomeScreen(vm: ChatViewModel, modifier: Modifier = Modifier) {
+    val contacts by vm.contacts.collectAsState()
 
-            if (selectedChat != null) {
-                ChatScreen(
-                    chatName = selectedChat.name,
-                    messages = uiState.messages,
-                    text = uiState.currentInput,
-                    onTextChange = onTextChange,
-                    onSend = onSendClick,
-                    onBack = onBackClick
+    Column(modifier = modifier) {
+        Button(
+            onClick = {
+                vm.addContact(
+                    name = "Test contact",
+                    macAddress = "00:11:22:33:44:55",
                 )
-            } else {
-                ChatListScreen(
-                    chats = uiState.chats,
-                    onChatClick = onChatClick
-                )
-            }
+            },
+        ) {
+            Text("Add contact")
+        }
+
+        Button(
+            onClick = {
+                val first = contacts.firstOrNull() ?: return@Button
+                vm.sendMessage(contactId = first.id, text = "Hello (OUT)")
+                vm.receiveMessage(contactId = first.id, text = "Hi (IN)")
+            },
+        ) {
+            Text("Add 2 messages to first contact")
+        }
+
+        Text("Contacts: ${contacts.size}")
+        contacts.forEach { c ->
+            Text("- ${c.id}: ${c.name} (${c.macAddress})")
         }
     }
 }
@@ -78,12 +76,6 @@ private fun BluetoothMessengerApp(
 @Composable
 private fun BluetoothMessengerAppPreview() {
     BluetoothGuysTheme {
-        BluetoothMessengerApp(
-            uiState = BluetoothMessengerUiState(),
-            onChatClick = {},
-            onBackClick = {},
-            onTextChange = {},
-            onSendClick = {}
-        )
+        Text("Preview")
     }
 }
