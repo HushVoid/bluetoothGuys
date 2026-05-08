@@ -14,17 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-
-/*
-для сообщения должно быть
-data class Message(
-    val id: String,
-    val text: String,
-    val time: String,
-    val isMine: Boolean
-)
- */
+import com.example.bluetoothguys.model.Message
 
 @Composable
 fun MessageBubble(message: Message) {

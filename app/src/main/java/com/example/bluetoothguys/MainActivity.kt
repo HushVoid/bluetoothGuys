@@ -10,12 +10,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.bluetoothguys.view.ui.screens.chat.ChatScreen
+import com.example.bluetoothguys.view.ui.screens.chat_list.ChatListScreen
 import com.example.bluetoothguys.view.ui.theme.BluetoothGuysTheme
 import com.example.bluetoothguys.view_model.ChatViewModel
 
@@ -73,7 +74,7 @@ fun HomeScreen(vm: ChatViewModel, modifier: Modifier = Modifier) {
 
 @Preview(showBackground = true)
 @Composable
-fun GreetingPreview() {
+private fun BluetoothMessengerAppPreview() {
     BluetoothGuysTheme {
         Text("Preview")
     }

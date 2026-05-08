@@ -19,20 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-
-/*
-для чата должно быть
-data class Chat(
-    val id: String,
-    val name: String,
-    val lastMessage: String,
-    val time: String,
-    val unreadCount: Int,
-    val isOnline: Boolean
-)
-
- */
+import com.example.bluetoothguys.model.Chat
 
 
 @Composable
