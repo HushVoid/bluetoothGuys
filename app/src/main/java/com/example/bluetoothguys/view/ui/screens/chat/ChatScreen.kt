@@ -2,12 +2,12 @@ package com.example.bluetoothguys.view.ui.screens.chat
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.example.bluetoothguys.model.Message
 import com.example.bluetoothguys.view.ui.components.AppHeader
 import com.example.bluetoothguys.view.ui.components.InputBar
 import com.example.bluetoothguys.view.ui.components.MessageBubble
@@ -17,10 +17,11 @@ import kotlin.collections.reversed
 fun ChatScreen(
     chatName: String,
     messages: List<Message>,
+    text: String,
+    onTextChange: (String) -> Unit,
+    onSend: () -> Unit,
     onBack: () -> Unit
 ) {
-    var text by remember { mutableStateOf("") }
-
     Column(modifier = Modifier.fillMaxSize()) {
 
         AppHeader(
@@ -41,11 +42,8 @@ fun ChatScreen(
 
         InputBar(
             text = text,
-            onTextChange = { text = it },
-            onSend = {
-                // TODO отправка
-                text = ""
-            }
+            onTextChange = onTextChange,
+            onSend = onSend
         )
     }
 }
