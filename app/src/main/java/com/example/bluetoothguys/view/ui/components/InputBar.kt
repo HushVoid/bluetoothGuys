@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -22,15 +21,15 @@ import androidx.compose.ui.unit.dp
 fun InputBar(
     text: String,
     onTextChange: (String) -> Unit,
-    onSend: () -> Unit
+    onSend: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-
         Icon(Icons.Default.AttachFile, contentDescription = null)
 
         Spacer(modifier = Modifier.width(8.dp))
@@ -39,11 +38,12 @@ fun InputBar(
             value = text,
             onValueChange = onTextChange,
             modifier = Modifier.weight(1f),
-            placeholder = { Text("Сообщение...") }
+            placeholder = { Text("Сообщение…") },
         )
 
         IconButton(onClick = onSend) {
-            Icon(Icons.Default.Send, contentDescription = null)
+            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
         }
     }
 }
+

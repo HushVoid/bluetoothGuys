@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,24 +27,26 @@ fun AppHeader(
     subtitle: String? = null,
     showBack: Boolean = false,
     onBackClick: () -> Unit = {},
-    rightIcon: ImageVector? = null
+    rightIcon: ImageVector? = null,
+    onRightIconClick: (() -> Unit)? = null,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF2D6CDF))
-            .padding(16.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF2D6CDF))
+                .padding(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-
             if (showBack) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBack,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clickable { onBackClick() }
+                    modifier =
+                        Modifier
+                            .size(24.dp)
+                            .clickable { onBackClick() },
                 )
                 Spacer(modifier = Modifier.width(8.dp))
             }
@@ -57,9 +58,22 @@ fun AppHeader(
                 }
             }
 
-            rightIcon?.let {
-                Icon(it, contentDescription = null, tint = Color.White)
+            rightIcon?.let { icon ->
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier =
+                        if (onRightIconClick != null) {
+                            Modifier
+                                .size(24.dp)
+                                .clickable { onRightIconClick() }
+                        } else {
+                            Modifier.size(24.dp)
+                        },
+                )
             }
         }
     }
 }
+

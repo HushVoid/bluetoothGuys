@@ -11,21 +11,24 @@ import com.example.bluetoothguys.view.ui.components.AppHeader
 import com.example.bluetoothguys.view.ui.components.ChatItem
 
 @Composable
-fun ChatListScreen(chats: List<Chat>, onChatClick: (Chat) -> Unit) {
-
+fun ChatListScreen(
+    chats: List<Chat>,
+    onChatClick: (Chat) -> Unit,
+    onBluetoothClick: (() -> Unit)? = null,
+) {
     Column {
         AppHeader(
             title = "Сообщения",
-            subtitle = "Bluetooth мессенджер",
-            rightIcon = Icons.Default.Bluetooth
+            subtitle = "Bluetooth-мессенджер",
+            rightIcon = Icons.Default.Bluetooth,
+            onRightIconClick = onBluetoothClick,
         )
 
         LazyColumn {
             items(chats) { chat ->
-                ChatItem(chat) {
-                    onChatClick(chat)
-                }
+                ChatItem(chat) { onChatClick(chat) }
             }
         }
     }
 }
+

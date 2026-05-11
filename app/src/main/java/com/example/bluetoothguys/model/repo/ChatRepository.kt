@@ -3,6 +3,7 @@ package com.example.bluetoothguys.model.repo
 import com.example.bluetoothguys.model.db.dao.ContactDao
 import com.example.bluetoothguys.model.db.dao.MessageDao
 import com.example.bluetoothguys.model.db.entities.ContactEntity
+import com.example.bluetoothguys.model.db.entities.ContactWithLastMessage
 import com.example.bluetoothguys.model.db.entities.MessageDirection
 import com.example.bluetoothguys.model.db.entities.MessageEntity
 import kotlinx.coroutines.flow.Flow
@@ -21,6 +22,9 @@ class ChatRepository(
 ) {
     /** Наблюдать список контактов (будет обновляться при изменениях в БД). */
     fun observeContacts(): Flow<List<ContactEntity>> = contactDao.observeAll()
+
+    fun observeContactsWithLastMessage(): Flow<List<ContactWithLastMessage>> =
+        contactDao.observeAllWithLastMessage()
 
     /** Получить контакт по id (одноразовый запрос). */
     suspend fun getContactById(id: Long): ContactEntity? = contactDao.getById(id)

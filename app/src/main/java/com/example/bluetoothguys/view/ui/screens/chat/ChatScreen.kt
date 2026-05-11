@@ -10,31 +10,30 @@ import com.example.bluetoothguys.model.Message
 import com.example.bluetoothguys.view.ui.components.AppHeader
 import com.example.bluetoothguys.view.ui.components.InputBar
 import com.example.bluetoothguys.view.ui.components.MessageBubble
-import kotlin.collections.reversed
 
 @Composable
 fun ChatScreen(
     chatName: String,
+    subtitle: String,
     messages: List<Message>,
     text: String,
     onTextChange: (String) -> Unit,
     onSend: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-
         AppHeader(
             title = chatName,
-            subtitle = "в сети • Bluetooth",
+            subtitle = subtitle,
             showBack = true,
-            onBackClick = onBack
+            onBackClick = onBack,
         )
 
         LazyColumn(
             modifier = Modifier.weight(1f),
-            reverseLayout = true
+            reverseLayout = true,
         ) {
-            items(messages.reversed()) {
+            items(messages.asReversed()) {
                 MessageBubble(it)
             }
         }
@@ -42,7 +41,8 @@ fun ChatScreen(
         InputBar(
             text = text,
             onTextChange = onTextChange,
-            onSend = onSend
+            onSend = onSend,
         )
     }
 }
+

@@ -7,6 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.example.bluetoothguys.model.db.entities.ContactEntity
+import com.example.bluetoothguys.model.db.entities.ContactWithLastMessage
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -25,6 +26,24 @@ interface ContactDao {
 
     @Query("SELECT * FROM contacts ORDER BY name COLLATE NOCASE ASC")
     fun observeAll(): Flow<List<ContactEntity>>
+
+    @Query(
+        """
+        SELECT c.*,
+               m.text AS lastMessageText,
+               m.sentAt AS lastMessageAt
+        FROM contacts c
+        LEFT JOIN messages m
+          ON m.id = (
+            SELECT id FROM messages
+            WHERE contactId = c.id
+            ORDER BY sentAt DESC, id DESC
+            LIMIT 1
+          )
+        ORDER BY COALESCE(m.sentAt, 0) DESC, c.name COLLATE NOCASE ASC
+        """,
+    )
+    fun observeAllWithLastMessage(): Flow<List<ContactWithLastMessage>>
 
     @Query("SELECT * FROM contacts WHERE id = :id LIMIT 1")
     suspend fun getById(id: Long): ContactEntity?
