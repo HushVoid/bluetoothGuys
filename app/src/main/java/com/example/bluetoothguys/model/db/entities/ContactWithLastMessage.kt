@@ -7,5 +7,6 @@ data class ContactWithLastMessage(
     val contact: ContactEntity,
     val lastMessageText: String?,
     val lastMessageAt: Long?,
+    val unreadCount: Int,
 )
 

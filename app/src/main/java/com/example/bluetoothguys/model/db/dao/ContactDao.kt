@@ -31,7 +31,11 @@ interface ContactDao {
         """
         SELECT c.*,
                m.text AS lastMessageText,
-               m.sentAt AS lastMessageAt
+               m.sentAt AS lastMessageAt,
+               (
+                 SELECT COUNT(*) FROM messages
+                 WHERE contactId = c.id AND direction = 'IN' AND isRead = 0
+               ) AS unreadCount
         FROM contacts c
         LEFT JOIN messages m
           ON m.id = (

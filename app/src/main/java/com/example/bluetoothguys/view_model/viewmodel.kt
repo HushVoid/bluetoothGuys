@@ -15,6 +15,7 @@ import com.example.bluetoothguys.model.db.entities.ContactEntity
 import com.example.bluetoothguys.model.db.entities.ContactWithLastMessage
 import com.example.bluetoothguys.model.db.entities.MessageDirection
 import com.example.bluetoothguys.model.db.entities.MessageEntity
+import com.example.bluetoothguys.model.db.entities.MessageStatus
 import com.example.bluetoothguys.model.repo.ChatRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -30,6 +31,7 @@ import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.UUID
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val db = BluetoothGuysDatabase.getInstance(application)
@@ -61,20 +63,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             scope = viewModelScope,
             onMessage = { address, text ->
                 viewModelScope.launch(Dispatchers.IO) {
-                    val existing = repo.getContactByMac(address)
-                    val contactId =
-                        existing?.id
-                            ?: repo.createContact(
-                                name = address,
-                                macAddress = address,
-                                serviceUuid = null,
-                            )
-                    repo.addMessage(
-                        contactId = contactId,
-                        direction = MessageDirection.IN,
-                        text = text,
-                        sentAt = System.currentTimeMillis(),
-                    )
+                    handleIncomingLine(address, text)
                 }
             },
             onPeerConnected = { address, name ->
@@ -270,8 +259,123 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             name = contact.name,
             lastMessage = lastMessageText ?: "Нет сообщений",
             time = lastMessageAt?.let { formatTime(it) } ?: "",
-            unreadCount = 0,
+            unreadCount = unreadCount,
             isOnline = isOnline,
         )
+    }
+
+    private suspend fun handleIncomingLine(address: String, raw: String) {
+        when {
+            raw.startsWith("MSG|") -> {
+                val parts = raw.split("|", limit = 3)
+                val clientId = parts.getOrNull(1)
+                val text = parts.getOrNull(2) ?: return
+
+                val existing = repo.getContactByMac(address)
+                val contactId =
+                    existing?.id
+                        ?: repo.createContact(
+                            name = address,
+                            macAddress = address,
+                            serviceUuid = null,
+                        )
+
+                repo.addMessage(
+                    contactId = contactId,
+                    direction = MessageDirection.IN,
+                    clientMessageId = clientId,
+                    text = text,
+                    sentAt = System.currentTimeMillis(),
+                    status = MessageStatus.SENT,
+                    isRead = false,
+                )
+
+                // Notify sender that we received the message.
+                if (!clientId.isNullOrBlank()) {
+                    bluetooth.send("DELIVERED|$clientId")
+                }
+            }
+
+            raw.startsWith("DELIVERED|") -> {
+                val id = raw.removePrefix("DELIVERED|").trim()
+                if (id.isNotBlank()) repo.updateOutgoingStatusByClientId(id, MessageStatus.DELIVERED)
+            }
+
+            raw.startsWith("READ|") -> {
+                val id = raw.removePrefix("READ|").trim()
+                if (id.isNotBlank()) repo.updateOutgoingStatusByClientId(id, MessageStatus.READ)
+            }
+
+            else -> {
+                // Backward compatibility: treat plain text as a message without receipts.
+                val existing = repo.getContactByMac(address)
+                val contactId =
+                    existing?.id
+                        ?: repo.createContact(
+                            name = address,
+                            macAddress = address,
+                            serviceUuid = null,
+                        )
+                repo.addMessage(
+                    contactId = contactId,
+                    direction = MessageDirection.IN,
+                    text = raw,
+                    sentAt = System.currentTimeMillis(),
+                    status = MessageStatus.SENT,
+                    isRead = false,
+                )
+            }
+        }
+    }
+
+    fun markChatRead(contactId: Long, address: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val ids = repo.getUnreadIncomingClientIds(contactId)
+            repo.markIncomingRead(contactId)
+            // Send read receipts for messages we just read.
+            ids.forEach { clientId ->
+                bluetooth.send("READ|$clientId")
+            }
+        }
+    }
+
+    fun sendOutgoingMessage(contactId: Long, address: String, text: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val clientId = UUID.randomUUID().toString()
+            val sentAt = System.currentTimeMillis()
+
+            repo.addMessage(
+                contactId = contactId,
+                direction = MessageDirection.OUT,
+                clientMessageId = clientId,
+                text = text,
+                sentAt = sentAt,
+                status = MessageStatus.SENDING,
+                isRead = true,
+            )
+
+            val res =
+                withContext(Dispatchers.Default) {
+                    // Ensure we are connected before sending the packet.
+                    val state = connectionState.value
+                    if (state !is ConnectionState.Connected || state.address != address) {
+                        bluetooth.connect(address)
+                    } else {
+                        Result.success(Unit)
+                    }
+                }
+
+            if (res.isFailure) {
+                repo.updateOutgoingStatusByClientId(clientId, MessageStatus.ERROR)
+                return@launch
+            }
+
+            val sendRes = bluetooth.send("MSG|$clientId|$text")
+            if (sendRes.isSuccess) {
+                repo.updateOutgoingStatusByClientId(clientId, MessageStatus.SENT)
+            } else {
+                repo.updateOutgoingStatusByClientId(clientId, MessageStatus.ERROR)
+            }
+        }
     }
 }

@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 import com.example.bluetoothguys.model.db.entities.MessageEntity
+import com.example.bluetoothguys.model.db.entities.MessageStatus
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -43,5 +44,32 @@ interface MessageDao {
         """,
     )
     suspend fun getLatestForContact(contactId: Long): MessageEntity?
+
+    @Query(
+        """
+        UPDATE messages
+        SET isRead = 1
+        WHERE contactId = :contactId AND direction = 'IN' AND isRead = 0
+        """,
+    )
+    suspend fun markIncomingRead(contactId: Long)
+
+    @Query(
+        """
+        SELECT clientMessageId FROM messages
+        WHERE contactId = :contactId AND direction = 'IN' AND isRead = 0 AND clientMessageId IS NOT NULL
+        ORDER BY sentAt ASC, id ASC
+        """,
+    )
+    suspend fun getUnreadIncomingClientIds(contactId: Long): List<String>
+
+    @Query(
+        """
+        UPDATE messages
+        SET status = :status
+        WHERE clientMessageId = :clientMessageId AND direction = 'OUT'
+        """,
+    )
+    suspend fun updateOutgoingStatusByClientId(clientMessageId: String, status: MessageStatus)
 }
 

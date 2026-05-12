@@ -26,7 +26,16 @@ data class MessageEntity(
     val id: Long = 0,
     val contactId: Long,
     val direction: MessageDirection,
+    /**
+     * Stable id that is transmitted over Bluetooth to match delivery/read receipts.
+     * For old rows (pre-migration) it can be null.
+     */
+    val clientMessageId: String? = null,
     val text: String,
     val sentAt: Long,
+    /** Outgoing status; for incoming messages it can be left as SENT. */
+    val status: MessageStatus = MessageStatus.SENT,
+    /** Only meaningful for incoming messages. */
+    val isRead: Boolean = true,
 )
 

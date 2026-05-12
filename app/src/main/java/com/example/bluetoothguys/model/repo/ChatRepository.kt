@@ -6,6 +6,7 @@ import com.example.bluetoothguys.model.db.entities.ContactEntity
 import com.example.bluetoothguys.model.db.entities.ContactWithLastMessage
 import com.example.bluetoothguys.model.db.entities.MessageDirection
 import com.example.bluetoothguys.model.db.entities.MessageEntity
+import com.example.bluetoothguys.model.db.entities.MessageStatus
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -77,14 +78,20 @@ class ChatRepository(
     suspend fun addMessage(
         contactId: Long,
         direction: MessageDirection,
+        clientMessageId: String? = null,
         text: String,
         sentAt: Long,
+        status: MessageStatus = MessageStatus.SENT,
+        isRead: Boolean = true,
     ): Long = messageDao.insert(
         MessageEntity(
             contactId = contactId,
             direction = direction,
+            clientMessageId = clientMessageId,
             text = text,
             sentAt = sentAt,
+            status = status,
+            isRead = isRead,
         ),
     )
 
@@ -102,6 +109,18 @@ class ChatRepository(
 
     suspend fun deleteMessagesForContact(contactId: Long) {
         messageDao.deleteForContact(contactId)
+    }
+
+    suspend fun markIncomingRead(contactId: Long) {
+        messageDao.markIncomingRead(contactId)
+    }
+
+    suspend fun getUnreadIncomingClientIds(contactId: Long): List<String> {
+        return messageDao.getUnreadIncomingClientIds(contactId)
+    }
+
+    suspend fun updateOutgoingStatusByClientId(clientMessageId: String, status: MessageStatus) {
+        messageDao.updateOutgoingStatusByClientId(clientMessageId, status)
     }
 }
 

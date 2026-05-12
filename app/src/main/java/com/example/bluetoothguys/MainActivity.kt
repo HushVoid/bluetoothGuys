@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -161,6 +162,11 @@ private fun BluetoothMessengerApp(vm: ChatViewModel) {
         }
 
         is Screen.Chat -> {
+            BackHandler {
+                vm.setActiveContact(null)
+                screen = Screen.ChatList
+            }
+
             val contacts by vm.contacts.collectAsState()
             val contact = contacts.firstOrNull { it.id == s.contactId }
             if (contact == null) {
@@ -200,6 +206,7 @@ private fun BluetoothMessengerApp(vm: ChatViewModel) {
             LaunchedEffect(contact.id) {
                 vm.setActiveContact(contact.id)
                 vm.connectToMac(contact.macAddress)
+                vm.markChatRead(contact.id, contact.macAddress)
             }
 
             ChatScreen(
@@ -212,8 +219,7 @@ private fun BluetoothMessengerApp(vm: ChatViewModel) {
                     val msg = text.trim()
                     if (msg.isBlank()) return@ChatScreen
                     text = ""
-                    vm.sendMessage(contactId = contact.id, text = msg)
-                    vm.sendMessageToMac(address = contact.macAddress, text = msg)
+                    vm.sendOutgoingMessage(contactId = contact.id, address = contact.macAddress, text = msg)
                 },
                 onBack = {
                     vm.setActiveContact(null)

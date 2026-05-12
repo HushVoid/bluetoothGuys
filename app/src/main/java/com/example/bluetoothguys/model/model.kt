@@ -1,5 +1,7 @@
 package com.example.bluetoothguys.model
 
+import com.example.bluetoothguys.model.db.entities.MessageStatus
+
 data class Chat(
     val id: String,
     val name: String,
@@ -15,4 +17,6 @@ data class Message(
     val text: String,
     val time: String,
     val isMine: Boolean
+    ,
+    val status: MessageStatus? = null,
 )
