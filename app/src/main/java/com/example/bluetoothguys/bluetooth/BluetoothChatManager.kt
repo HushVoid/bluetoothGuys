@@ -11,6 +11,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -107,6 +108,8 @@ class BluetoothChatManager(
                 Result.success(Unit)
             } catch (t: Throwable) {
                 _state.value = ConnectionState.Error(t.message ?: "Ошибка подключения")
+                // Ensure we drop any half-open peer so the next attempt can reconnect cleanly.
+                disconnect()
                 Result.failure(t)
             }
         }
@@ -119,6 +122,8 @@ class BluetoothChatManager(
             Result.success(Unit)
         } catch (t: Throwable) {
             _state.value = ConnectionState.Error(t.message ?: "Ошибка отправки")
+            // Drop broken connection so the user can reconnect.
+            disconnect()
             Result.failure(t)
         }
     }
@@ -161,7 +166,7 @@ class BluetoothChatManager(
                     onMessage(address, line)
                 },
                 onClosed = { throwable ->
-                    if (throwable != null) {
+                    if (throwable != null && throwable !is CancellationException) {
                         _state.value =
                             ConnectionState.Error(
                                 throwable.message ?: "Соединение закрыто с ошибкой",

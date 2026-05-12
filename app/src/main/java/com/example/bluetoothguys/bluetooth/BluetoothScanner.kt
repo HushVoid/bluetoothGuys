@@ -12,6 +12,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -108,8 +109,20 @@ class BluetoothScanner(
                     addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
                     addAction(BluetoothDevice.ACTION_FOUND)
                 }
-            appContext.registerReceiver(receiver, filter)
-            receiverRegistered = true
+            // On Android 13+ (and especially with higher targetSdk), registering a receiver
+            // without explicit exported flags can throw SecurityException.
+            try {
+                ContextCompat.registerReceiver(
+                    appContext,
+                    receiver,
+                    filter,
+                    RECEIVER_NOT_EXPORTED,
+                )
+                receiverRegistered = true
+            } catch (_: SecurityException) {
+                _isDiscovering.value = false
+                return false
+            }
         }
 
         if (a.isDiscovering) a.cancelDiscovery()

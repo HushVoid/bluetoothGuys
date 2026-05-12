@@ -220,12 +220,17 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun sendMessageToMac(address: String, text: String) {
         viewModelScope.launch {
-            // Best-effort: connect if we are not connected to this address.
+            // Connect (if needed) and only send when we are actually connected.
             val state = connectionState.value
             if (state !is ConnectionState.Connected || state.address != address) {
-                bluetooth.connect(address)
+                val res = bluetooth.connect(address)
+                if (res.isFailure) return@launch
             }
-            bluetooth.send(text)
+
+            val now = connectionState.value
+            if (now is ConnectionState.Connected && now.address == address) {
+                bluetooth.send(text)
+            }
         }
     }
 

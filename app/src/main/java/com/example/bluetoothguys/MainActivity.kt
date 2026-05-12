@@ -21,8 +21,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -60,13 +62,28 @@ private sealed interface Screen {
 
 @Composable
 private fun BluetoothMessengerApp(vm: ChatViewModel) {
-    var screen: Screen by rememberSaveable { mutableStateOf(Screen.ChatList) }
+    var screen: Screen by rememberSaveable(stateSaver = ScreenSaver) { mutableStateOf(Screen.ChatList) }
 
-    val hasConnectPermission = rememberPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    val hasScanPermission = rememberPermission(Manifest.permission.BLUETOOTH_SCAN)
+    // Forces permission re-check after system dialogs return.
+    var permissionNonce by remember { mutableIntStateOf(0) }
+
+    val context = LocalContext.current
+    val hasConnectPermission = remember(permissionNonce, context) {
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.BLUETOOTH_CONNECT,
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+    val hasScanPermission = remember(permissionNonce, context) {
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.BLUETOOTH_SCAN,
+        ) == PackageManager.PERMISSION_GRANTED
+    }
 
     val permissionsLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+            permissionNonce++
             vm.refreshBondedDevices()
             vm.refreshBluetoothEnabled()
         }
@@ -85,10 +102,10 @@ private fun BluetoothMessengerApp(vm: ChatViewModel) {
 
     val bluetoothEnabled by vm.bluetoothEnabled.collectAsState()
 
-    val missingPermissions = remember(hasConnectPermission.value, hasScanPermission.value) {
+    val missingPermissions = remember(hasConnectPermission, hasScanPermission) {
         buildList {
-            if (!hasConnectPermission.value) add(Manifest.permission.BLUETOOTH_CONNECT)
-            if (!hasScanPermission.value) add(Manifest.permission.BLUETOOTH_SCAN)
+            if (!hasConnectPermission) add(Manifest.permission.BLUETOOTH_CONNECT)
+            if (!hasScanPermission) add(Manifest.permission.BLUETOOTH_SCAN)
         }
     }
 
@@ -147,7 +164,13 @@ private fun BluetoothMessengerApp(vm: ChatViewModel) {
             val contacts by vm.contacts.collectAsState()
             val contact = contacts.firstOrNull { it.id == s.contactId }
             if (contact == null) {
-                screen = Screen.ChatList
+                // Contacts are loaded asynchronously; don't immediately "bounce back" to the list.
+                // Only return to ChatList if we already have contacts but the requested one is missing.
+                if (contacts.isNotEmpty()) {
+                    screen = Screen.ChatList
+                } else {
+                    LoadingScreen(text = "Загрузка чата…")
+                }
                 return
             }
 
@@ -201,6 +224,35 @@ private fun BluetoothMessengerApp(vm: ChatViewModel) {
     }
 }
 
+private val ScreenSaver: Saver<Screen, String> =
+    Saver(
+        save = { s ->
+            when (s) {
+                Screen.ChatList -> "chat_list"
+                Screen.Devices -> "devices"
+                is Screen.Chat -> "chat:${s.contactId}"
+            }
+        },
+        restore = { raw ->
+            when {
+                raw == "chat_list" -> Screen.ChatList
+                raw == "devices" -> Screen.Devices
+                raw.startsWith("chat:") -> {
+                    val id = raw.removePrefix("chat:").toLongOrNull()
+                    if (id == null) Screen.ChatList else Screen.Chat(id)
+                }
+                else -> Screen.ChatList
+            }
+        },
+    )
+
+@Composable
+private fun LoadingScreen(text: String) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(text = text, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
 @Composable
 private fun PermissionScreen(onRequest: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -209,24 +261,3 @@ private fun PermissionScreen(onRequest: () -> Unit) {
         }
     }
 }
-
-@Composable
-private fun rememberPermission(permission: String) =
-    run {
-        val context = LocalContext.current
-        remember(permission, context) {
-            mutableStateOf(
-                ContextCompat.checkSelfPermission(
-                    context,
-                    permission,
-                ) == PackageManager.PERMISSION_GRANTED,
-            )
-        }.also { state ->
-            // Refresh each composition; cheap and keeps UI correct after system dialogs.
-            state.value =
-                ContextCompat.checkSelfPermission(
-                    context,
-                    permission,
-                ) == PackageManager.PERMISSION_GRANTED
-        }
-    }

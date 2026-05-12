@@ -37,8 +37,9 @@ class BluetoothPeer(
                 }
                 onClosed(null)
             } catch (e: CancellationException) {
-                onClosed(e)
-                throw e
+                // Normal shutdown path (e.g. user navigated away / reconnect).
+                onClosed(null)
+                return@launch
             } catch (t: Throwable) {
                 onClosed(t)
             } finally {
@@ -54,7 +55,8 @@ class BluetoothPeer(
                     writer.flush()
                 }
             } catch (e: CancellationException) {
-                throw e
+                // Normal shutdown path.
+                return@launch
             } catch (t: Throwable) {
                 onClosed(t)
             } finally {
