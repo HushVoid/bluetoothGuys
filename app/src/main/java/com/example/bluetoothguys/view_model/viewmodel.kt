@@ -119,6 +119,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     text = m.text,
                     time = formatTime(m.sentAt),
                     isMine = m.direction == MessageDirection.OUT,
+                    status = m.status,
                 )
             }
         }
@@ -271,14 +272,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 val clientId = parts.getOrNull(1)
                 val text = parts.getOrNull(2) ?: return
 
-                val existing = repo.getContactByMac(address)
-                val contactId =
-                    existing?.id
-                        ?: repo.createContact(
-                            name = address,
-                            macAddress = address,
-                            serviceUuid = null,
-                        )
+                val contactId = getOrCreateContactId(address)
+                val isActiveChat = activeContactId.value == contactId
 
                 repo.addMessage(
                     contactId = contactId,
@@ -287,12 +282,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     text = text,
                     sentAt = System.currentTimeMillis(),
                     status = MessageStatus.SENT,
-                    isRead = false,
+                    isRead = isActiveChat,
                 )
 
-                // Notify sender that we received the message.
                 if (!clientId.isNullOrBlank()) {
                     bluetooth.send("DELIVERED|$clientId")
+                    if (isActiveChat) {
+                        bluetooth.send("READ|$clientId")
+                    }
                 }
             }
 
@@ -308,21 +305,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
             else -> {
                 // Backward compatibility: treat plain text as a message without receipts.
-                val existing = repo.getContactByMac(address)
-                val contactId =
-                    existing?.id
-                        ?: repo.createContact(
-                            name = address,
-                            macAddress = address,
-                            serviceUuid = null,
-                        )
+                val contactId = getOrCreateContactId(address)
                 repo.addMessage(
                     contactId = contactId,
                     direction = MessageDirection.IN,
                     text = raw,
                     sentAt = System.currentTimeMillis(),
                     status = MessageStatus.SENT,
-                    isRead = false,
+                    isRead = activeContactId.value == contactId,
                 )
             }
         }
@@ -332,11 +322,33 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             val ids = repo.getUnreadIncomingClientIds(contactId)
             repo.markIncomingRead(contactId)
-            // Send read receipts for messages we just read.
+            if (ids.isEmpty()) return@launch
+
+            withContext(Dispatchers.Default) {
+                val state = connectionState.value
+                if (state !is ConnectionState.Connected || state.address != address) {
+                    bluetooth.connect(address)
+                } else {
+                    Result.success(Unit)
+                }
+            }.onFailure {
+                return@launch
+            }
+
             ids.forEach { clientId ->
                 bluetooth.send("READ|$clientId")
             }
         }
+    }
+
+    private suspend fun getOrCreateContactId(address: String): Long {
+        val existing = repo.getContactByMac(address)
+        return existing?.id
+            ?: repo.createContact(
+                name = address,
+                macAddress = address,
+                serviceUuid = null,
+            )
     }
 
     fun sendOutgoingMessage(contactId: Long, address: String, text: String) {

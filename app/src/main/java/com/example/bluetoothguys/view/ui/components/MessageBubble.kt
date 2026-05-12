@@ -12,15 +12,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -64,16 +59,16 @@ fun MessageBubble(message: Message) {
                     Text(
                         message.time,
                         fontSize = 10.sp,
-                        color = if (message.isMine) Color.White else Color.Gray,
+                        color = if (message.isMine) Color.White.copy(alpha = 0.7f) else Color.Gray,
                     )
                     if (message.isMine) {
                         StatusIcon(
                             status = message.status,
                             tint =
                                 when (message.status) {
-                                    MessageStatus.READ -> Color(0xFFBFE3FF) // subtle "read" accent
+                                    MessageStatus.READ -> Color(0xFFBFE3FF)
                                     MessageStatus.ERROR -> Color(0xFFFFB4AB)
-                                    else -> Color.White
+                                    else -> Color.White.copy(alpha = 0.7f)
                                 },
                             size = 14.dp,
                         )
@@ -88,15 +83,14 @@ fun MessageBubble(message: Message) {
 private fun StatusIcon(status: MessageStatus?, tint: Color, size: Dp) {
     val icon =
         when (status) {
-            MessageStatus.SENDING -> Icons.Default.MoreVert
-            MessageStatus.SENT -> Icons.Default.Check
-            MessageStatus.DELIVERED -> Icons.Default.Done
-            MessageStatus.READ -> Icons.Default.CheckCircle
-            MessageStatus.ERROR -> Icons.Default.Close
+            MessageStatus.SENDING -> Icons.Default.Schedule
+            MessageStatus.SENT -> Icons.Default.Done      // Всегда две галочки
+            MessageStatus.DELIVERED -> Icons.Default.Done // Всегда две галочки
+            MessageStatus.READ -> Icons.Default.DoneAll      // Всегда две галочки
+            MessageStatus.ERROR -> Icons.Default.ErrorOutline
             null -> null
         } ?: return
 
-    // Keep a tiny gap from the time text.
     Spacer(modifier = Modifier.width(2.dp))
     Icon(
         imageVector = icon,

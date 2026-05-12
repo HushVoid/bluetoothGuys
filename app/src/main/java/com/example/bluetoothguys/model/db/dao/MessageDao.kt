@@ -71,5 +71,13 @@ interface MessageDao {
         """,
     )
     suspend fun updateOutgoingStatusByClientId(clientMessageId: String, status: MessageStatus)
-}
 
+    @Query(
+        """
+        SELECT status FROM messages
+        WHERE clientMessageId = :clientMessageId AND direction = 'OUT'
+        LIMIT 1
+        """,
+    )
+    suspend fun getOutgoingStatusByClientId(clientMessageId: String): MessageStatus?
+}
