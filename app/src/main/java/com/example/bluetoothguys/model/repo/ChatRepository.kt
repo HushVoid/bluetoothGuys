@@ -120,7 +120,27 @@ class ChatRepository(
     }
 
     suspend fun updateOutgoingStatusByClientId(clientMessageId: String, status: MessageStatus) {
-        messageDao.updateOutgoingStatusByClientId(clientMessageId, status)
+        val current = messageDao.getOutgoingStatusByClientId(clientMessageId) ?: return
+        if (status.shouldReplace(current)) {
+            messageDao.updateOutgoingStatusByClientId(clientMessageId, status)
+        }
     }
 }
 
+private fun MessageStatus.shouldReplace(current: MessageStatus): Boolean {
+    if (this == current) return false
+    if (current == MessageStatus.ERROR) return false
+    if (this == MessageStatus.ERROR) return current == MessageStatus.SENDING
+
+    return receiptRank > current.receiptRank
+}
+
+private val MessageStatus.receiptRank: Int
+    get() =
+        when (this) {
+            MessageStatus.SENDING -> 0
+            MessageStatus.SENT -> 1
+            MessageStatus.DELIVERED -> 2
+            MessageStatus.READ -> 3
+            MessageStatus.ERROR -> -1
+        }
